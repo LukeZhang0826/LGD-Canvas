@@ -2,12 +2,33 @@
 import React, { useState, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import './Canvas.css';
+import axios from 'axios';
+import { MdRestartAlt } from "react-icons/md";
+
 
 const Canvas = () => {
   const [rectangles, setRectangles] = useState([]);
   const [inputSentence, setInputSentence] = useState('');
   const [wordButtons, setWordButtons] = useState([]);
+  const [imageUrl, setImageUrl] = useState('');
   const textareaRef = useRef(null);
+
+  async function fetchAndDisplayImage(returnData) {
+    try {
+      const response = await axios.post(process.env.REACT_APP_API_ENDPOINT, returnData, {
+        responseType: 'blob' // This tells Axios to expect a binary response
+      });
+      // Create a URL for the blob
+      const imageUrl = URL.createObjectURL(response.data);
+      setImageUrl(imageUrl);
+      // const img = document.getElementById('generated-image');
+      // img.src = imageUrl; // Set the src of your img tag to the blob URL
+  
+      console.log(imageUrl);
+    } catch (error) {
+      console.error(error);
+    }
+  }
 
   const getRandomColor = () => {
     const letters = '0123456789ABCDEF';
@@ -70,7 +91,7 @@ const Canvas = () => {
     handleRemoveRectangle(id);
   };
 
-  const handleGenerateButtonClick = () => {
+  const handleGenerateButtonClick = async () => {
     if (rectangles.length === 0) {
       alert('Please drag some boxes first!');
       return;
@@ -79,17 +100,20 @@ const Canvas = () => {
     const returnArray = []
 
     for (let i = 0; i < rectangles.length; i++) {
-      returnArray.push(rectangles[i].word)
       const data = {}
       data['name'] = rectangles[i].word
       data['x'] = Math.abs(parseInt((rectangles[i].x / 512) * 64));
       data['y'] = Math.abs(parseInt((rectangles[i].y / 512) * 64));
       data['width'] = Math.abs(parseInt((rectangles[i].width / 512) * 64));
       data['height'] = Math.abs(parseInt((rectangles[i].height / 512) * 64));
-
       returnArray.push(data)
     }
-    console.log(returnArray, inputSentence)
+    const returnData = {
+      'rectangles': returnArray,
+      'prompt': inputSentence
+    }
+
+    fetchAndDisplayImage(returnData);
   };
 
   const renderWordButtons = () => {
@@ -99,7 +123,7 @@ const Canvas = () => {
         key={index}
         style={{ backgroundColor: wordButtons[index] }}
         onClick={() => handleWordButtonClick(wordButtons[index], word)}
-        className="text-white px-4 py-2 rounded-md cursor-pointer font-bold text-base transition duration-100 hover:bg-green-600 transform hover:scale-105"
+        className="text-white mr-2 mb-2 shadow-lg px-4 py-2 rounded-md cursor-pointer font-bold text-base transition duration-100 hover:bg-green-600 transform hover:scale-105"
       >
         {word}
       </button>
@@ -129,8 +153,13 @@ const Canvas = () => {
 
   return (
     <div className="w-[90%] md:w-[60%] mx-auto flex flex-col items-center gap-8 py-16">
-      <div className="w-full shadow-sm ring-1 ring-inset ring-gray-300 rounded-xl transition-all px-6 py-4 flex dark:ring-gray-500">
-        <div className="flex flex-col justify-center items-center w-full">
+      {imageUrl !== "" && (
+      <button className="absolute top-4 right-6 text-gray-900 dark:text-gray-200 hover:text-gray-500 dark:hover:text-gray-300 hover:scale-110 duration-200" onClick={() => setImageUrl("")}>
+        <MdRestartAlt className="h-8 w-8 text-gray-900 dark:text-gray-200 duration-200"/>
+      </button>
+      )}
+      <div className="w-full shadow-lg ring-1 ring-inset ring-gray-300 rounded-xl transition-all px-6 py-4 flex dark:ring-gray-500 bg-gray-50 dark:bg-gray-950">
+        <div className="flex flex-col justify-center w-full ">
           <textarea
             ref={textareaRef}
             type="text"
@@ -140,43 +169,49 @@ const Canvas = () => {
             className="outline-none bg-transparent w-full resize-none overflow-hidden flex items-center h-6 dark:text-gray-100"
           />
           {wordButtons.length !== 0 && (
-            <div className="mt-4">
-              <div className="block overflow-none space-y-2 space-x-2">
+            <div className="mt-8">
+              <div className="block overflow-none">
                 {renderWordButtons()}
               </div>
             </div>
           )}
         </div>
         <div className="ml-4 flex items-center">
-          <button className="bg-gray-900 text-gray-50 px-4 py-2 rounded-xl hover:bg-gray-500 duration-100 hover:scale-105 font-bold dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"  onClick={handleGenerateButtonClick}>
+          <button className="bg-gray-900 shadow-lg text-gray-50 px-4 py-2 rounded-xl hover:bg-gray-500 duration-200 hover:scale-105 font-bold dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"  onClick={handleGenerateButtonClick}>
             Generate
           </button>
         </div>
       </div>
-      <div className="canvas w-[512px] h-[512px] border-2 border-solid border-gray-900 relative mx-auto dark:border-gray-300">
-        {rectangles.map((rectangle) => (
-          <Rnd
-            key={rectangle.id}
-            className="border-2 border-solid border-gray-900 dark:border-gray-300"
-            size={{ width: rectangle.width, height: rectangle.height }}
-            position={{ x: rectangle.x, y: rectangle.y }}
-            bounds=".canvas"
-            onDragStop={(e, d) => handleDragStop(rectangle.id, e, d)}
-            onResize={(e, direction, ref, delta, position) =>
-              handleResize(rectangle.id, direction, ref, delta, position)
-            }
-            onContextMenu={(e) => handleContextMenu(e, rectangle.id)}
-          >
-            <div
-                className="flex items-center justify-center relative text-base font-normal text-gray-100 font-bold text-sm"
-              style={{ backgroundColor: rectangle.color, border: `2px solid ${rectangle.color}` }}
+      
+      {
+        imageUrl !=="" ? (
+        <img id="generated-image" src={imageUrl} alt="canvas" className="bg-gray-50 shadow-2xl duration-200 dark:bg-gray-950 w-[512px] h-[512px] object-cover ring-1 ring-solid ring-gray-700 relative mx-auto dark:ring-gray-400 rounded-xl" />
+        ) : (
+        <div className="canvas bg-gray-50 shadow-2xl duration-200 dark:bg-gray-950 w-[512px] h-[512px] ring-1 ring-solid ring-gray-700 relative mx-auto dark:ring-gray-400 rounded-xl">
+          {rectangles.map((rectangle) => (
+            <Rnd
+              key={rectangle.id}
+              className="ring-1 ring-solid ring-gray-700 dark:ring-gray-400 rounded-xl overflow-hidden"
+              size={{ width: rectangle.width, height: rectangle.height }}
+              position={{ x: rectangle.x, y: rectangle.y }}
+              bounds=".canvas"
+              onDragStop={(e, d) => handleDragStop(rectangle.id, e, d)}
+              onResize={(e, direction, ref, delta, position) =>
+                handleResize(rectangle.id, direction, ref, delta, position)
+              }
+              onContextMenu={(e) => handleContextMenu(e, rectangle.id)}
             >
-              {rectangle.word}
-            </div>
-          </Rnd>
-        ))}
+              <div
+                  className="flex items-center justify-center relative text-base font-normal text-gray-100 font-bold text-sm "
+                style={{ backgroundColor: rectangle.color, border: `2px solid ${rectangle.color}` }}
+              >
+                {rectangle.word}
+              </div>
+            </Rnd>
+          ))}
+        </div>
+      )}
       </div>
-    </div>
   );
 };
 

@@ -6,14 +6,14 @@ function App() {
   const [enabled, setEnabled] = useState(false)
   return (
     <main className={`w-screen h-screen ${enabled ? "" : "dark"}`}>
-      <div className="h-full w-full dark:bg-gray-900 overflow-auto">
+      <div className="h-full w-full dark:bg-gray-900 overflow-auto duration-200">
         <Canvas />
       </div>
       <div className="absolute top-5 left-6">
         <Switch
           checked={enabled}
           onChange={setEnabled}
-          className={`${enabled ? 'bg-purple-400' : 'bg-purple-700'}
+          className={`${enabled ? 'bg-slate-400' : 'bg-slate-700'}
             relative inline-flex h-[24px] w-[48px] shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus-visible:ring-2  focus-visible:ring-white/75`}
         >
           <span className="sr-only">Use setting</span>
