@@ -70,7 +70,7 @@ const s3Client = new S3Client({
 
 
   return (
-    <main className={`w-screen h-screen ${enabled ? "" : "dark"}`}>
+    <main id="screen" className={`w-screen h-screen ${enabled ? "" : "dark"}`}>
       <div className="h-full w-full dark:bg-gray-900 overflow-auto duration-200">
         <Canvas />
         <div className="flex justify-center items-center h-24 mt-24 mb-8">
