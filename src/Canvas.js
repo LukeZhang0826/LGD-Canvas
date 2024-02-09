@@ -3,8 +3,10 @@ import React, { useState, useRef } from 'react';
 import { Rnd } from 'react-rnd';
 import './Canvas.css';
 import axios from 'axios';
-import { MdRestartAlt } from "react-icons/md";
+import { toast } from 'react-toastify';
 
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { v4 as uuidv4 } from 'uuid';
 
 const Canvas = () => {
   const [rectangles, setRectangles] = useState([]);
@@ -13,18 +15,49 @@ const Canvas = () => {
   const [imageUrl, setImageUrl] = useState('');
   const textareaRef = useRef(null);
 
+  const s3Client = new S3Client({
+    region: "us-east-1", // e.g., 'us-east-1'
+    credentials: {
+      accessKeyId: process.env.REACT_APP_AWS_ACCESS_KEY_ID,
+      secretAccessKey: process.env.REACT_APP_AWS_SECRET_ACCESS_KEY,
+    },
+  });
+
+  const uploadFileToS3 = async (file) => {
+    const uploadParams = {
+      Bucket: "lgdimagebucket",
+      Key: `${uuidv4()}_${Date.now()}`,
+      Body: file,
+      ContentType: 'image/png',
+    };
+  
+    try {
+      const data = await s3Client.send(new PutObjectCommand(uploadParams));
+    } catch (err) {
+      console.error("Error", err);
+      throw err;
+    }
+  };
+
   async function fetchAndDisplayImage(returnData) {
     try {
       const response = await axios.post(process.env.REACT_APP_API_ENDPOINT, returnData, {
-        responseType: 'blob' // This tells Axios to expect a binary response
+        responseType: 'blob'
       });
-      // Create a URL for the blob
       const imageUrl = URL.createObjectURL(response.data);
       setImageUrl(imageUrl);
-      // const img = document.getElementById('generated-image');
-      // img.src = imageUrl; // Set the src of your img tag to the blob URL
-  
-      console.log(imageUrl);
+      uploadFileToS3(response.data);
+
+      toast('🦄 Image Generated!', {
+        position: "top-right",
+        autoClose: 5000,  
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: "light",
+      });
     } catch (error) {
       console.error(error);
     }
@@ -92,8 +125,17 @@ const Canvas = () => {
   };
 
   const handleGenerateButtonClick = async () => {
-    if (rectangles.length === 0) {
-      alert('Please drag some boxes first!');
+    if (rectangles.length === 0 || inputSentence.trim() === ''){
+      toast.error('Add some words to the Canvas!', {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: false,
+        draggable: false,
+        progress: undefined,
+        theme: "light",
+      });
       return;
     }
 
@@ -123,7 +165,7 @@ const Canvas = () => {
         key={index}
         style={{ backgroundColor: wordButtons[index] }}
         onClick={() => handleWordButtonClick(wordButtons[index], word)}
-        className="text-white mr-2 mb-2 shadow-lg px-4 py-2 rounded-md cursor-pointer font-bold text-base transition duration-100 hover:bg-green-600 transform hover:scale-105"
+        className="text-white mr-2 mb-2 shadow-lg px-4 py-2 rounded-md cursor-pointer font-bold text-base transition duration-100 transform hover:scale-105"
       >
         {word}
       </button>
@@ -153,11 +195,11 @@ const Canvas = () => {
 
   return (
     <div className="w-[90%] md:w-[60%] mx-auto flex flex-col items-center gap-8 py-16">
-      {imageUrl !== "" && (
+      {/* {imageUrl !== "" && (
       <button className="absolute top-4 right-6 text-gray-900 dark:text-gray-200 hover:text-gray-500 dark:hover:text-gray-300 hover:scale-110 duration-200" onClick={() => setImageUrl("")}>
         <MdRestartAlt className="h-8 w-8 text-gray-900 dark:text-gray-200 duration-200"/>
       </button>
-      )}
+      )} */}
       <div className="w-full shadow-lg ring-1 ring-inset ring-gray-300 rounded-xl transition-all px-6 py-4 flex dark:ring-gray-500 bg-gray-50 dark:bg-gray-950">
         <div className="flex flex-col justify-center w-full ">
           <textarea
@@ -177,21 +219,27 @@ const Canvas = () => {
           )}
         </div>
         <div className="ml-4 flex items-center">
-          <button className="bg-gray-900 shadow-lg text-gray-50 px-4 py-2 rounded-xl hover:bg-gray-500 duration-200 hover:scale-105 font-bold dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"  onClick={handleGenerateButtonClick}>
-            Generate
-          </button>
+          {imageUrl !== "" ? (
+            <button className="w-32 bg-gray-900 shadow-lg text-gray-50 px-4 py-2 rounded-xl hover:bg-gray-500 duration-200 hover:scale-105 font-bold dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"  onClick={() => setImageUrl("")}>
+              Try Again
+            </button>
+          ) : (
+            <button className="w-32 bg-gray-900 shadow-lg text-gray-50 px-4 py-2 rounded-xl hover:bg-gray-500 duration-200 hover:scale-105 font-bold dark:bg-gray-200 dark:text-gray-900 dark:hover:bg-gray-300"  onClick={handleGenerateButtonClick}>
+              Generate
+            </button>
+          )}
         </div>
       </div>
       
       {
         imageUrl !=="" ? (
-        <img id="generated-image" src={imageUrl} alt="canvas" className="bg-gray-50 shadow-2xl duration-200 dark:bg-gray-950 w-[512px] h-[512px] object-cover ring-1 ring-solid ring-gray-700 relative mx-auto dark:ring-gray-400 rounded-xl" />
+        <img id="generated-image" src={imageUrl} alt="canvas" className="bg-gray-50 shadow-2xl duration-200 dark:bg-gray-950 w-[512px] h-[512px] object-cover ring-1 ring-inset ring-gray-300 relative mx-auto dark:ring-gray-400 rounded-xl" />
         ) : (
-        <div className="canvas bg-gray-50 shadow-2xl duration-200 dark:bg-gray-950 w-[512px] h-[512px] ring-1 ring-solid ring-gray-700 relative mx-auto dark:ring-gray-400 rounded-xl">
+        <div className="canvas bg-gray-50 shadow-md duration-200 dark:bg-gray-950 w-[512px] h-[512px] ring-1 ring-solid ring-gray-300 relative mx-auto dark:ring-gray-400 rounded-xl">
           {rectangles.map((rectangle) => (
             <Rnd
               key={rectangle.id}
-              className="ring-1 ring-solid ring-gray-700 dark:ring-gray-400 rounded-xl overflow-hidden"
+              className="ring-1 ring-solid ring-gray-300 dark:ring-gray-400 rounded-xl overflow-hidden"
               size={{ width: rectangle.width, height: rectangle.height }}
               position={{ x: rectangle.x, y: rectangle.y }}
               bounds=".canvas"
