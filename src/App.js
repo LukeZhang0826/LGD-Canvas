@@ -71,7 +71,7 @@ const s3Client = new S3Client({
 
   return (
     <main id="screen" className={`w-screen h-screen ${enabled ? "" : "dark"}`}>
-      <div className="h-full w-full dark:bg-gray-900 overflow-auto duration-200">
+      <div className="h-full w-full dark:bg-gray-900 overflow-auto duration-200 opacity-[95%]">
         <Canvas />
         <div className="flex justify-center items-center h-24 mt-24 mb-8">
           <h1 className="text-3xl font-bold text-center text-gray-800 dark:text-gray-100">User Generated Images</h1>
@@ -100,6 +100,7 @@ const s3Client = new S3Client({
           />
         </Switch>
       </div>
+      <img src="bg.svg" alt="bg" className="absolute bottom-0 right-0 w-full h-full z-[-1] object-cover opacity-[10%] dark:opacity-[50%] duration-150" />
       <ToastContainer />
     </main>
   );
