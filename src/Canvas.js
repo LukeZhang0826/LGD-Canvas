@@ -41,6 +41,7 @@ const Canvas = () => {
 
   async function fetchAndDisplayImage(returnData) {
     try {
+      console.log(returnData);
       const response = await axios.post(process.env.REACT_APP_API_ENDPOINT, returnData, {
         responseType: 'blob'
       });
@@ -140,6 +141,7 @@ const Canvas = () => {
     }
 
     const returnArray = []
+    const stringArr = inputSentence.match(/\b[a-zA-Z0-9_$'-]+\b/g) || [];
 
     for (let i = 0; i < rectangles.length; i++) {
       const data = {}
@@ -148,12 +150,29 @@ const Canvas = () => {
       data['y'] = Math.abs(parseInt((rectangles[i].y / 512) * 64));
       data['width'] = Math.abs(parseInt((rectangles[i].width / 512) * 64));
       data['height'] = Math.abs(parseInt((rectangles[i].height / 512) * 64));
+      data['index'] = stringArr.indexOf(rectangles[i].word)
+      if (data['index'] === -1) {
+        toast.error('Error: Word not found in sentence!', {
+          position: "top-right",
+          autoClose: 5000,
+          hideProgressBar: false,
+          closeOnClick: true,
+          pauseOnHover: false,
+          draggable: false,
+          progress: undefined,
+          theme: "light",
+        });
+        return;
+      }
       returnArray.push(data)
     }
+
+    
     const returnData = {
       'rectangles': returnArray,
       'prompt': inputSentence
     }
+
 
     fetchAndDisplayImage(returnData);
   };
